@@ -15,8 +15,8 @@ class Main:
 
     def update(self):
         self.delta_time = self.clock.tick(FPS)
+        pg.display.set_caption(f'FPS: [{round(self.clock.get_fps(), 1)}]')
         self.draw()
-
         pg.display.flip()
 
     def draw(self):
