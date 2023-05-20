@@ -10,12 +10,14 @@ class Main:
         self.window = pg.display.set_mode((WIDTH, HEIGHT))
         self.body = Body(self)
         self.clock = pg.time.Clock()
+
+        self.score = 0
         
 
 
     def update(self):
         self.delta_time = self.clock.tick(FPS)
-        pg.display.set_caption(f'FPS: [{round(self.clock.get_fps(), 1)}]')
+        pg.display.set_caption(f'FPS: [{round(self.clock.get_fps(), 1)}],       SCORE: [{self.score}]')
         self.draw()
         pg.display.flip()
 
@@ -26,8 +28,9 @@ class Main:
 
 
     def check_events(self):
-        for events in pg.event.get():
-            if events.type == pg.QUIT:
+        self.events = pg.event.get()
+        for e in self.events:
+            if e.type == pg.QUIT:
                 self.running = False
 
 
