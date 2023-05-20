@@ -48,8 +48,8 @@ class UI:
         self.health_duck = pg.transform.scale(self.health_duck, (40, 40))
         self.health_skull = pg.transform.scale(self.health_skull, (40, 40))
 
-        self.game_over_img = pg.image.load('textures/game_over.png')
-        self.game_over_img = pg.transform.scale(self.game_over_img, (200, 100))
+        self.game_over_img = pg.image.load('textures/game_over.png') #600, 309
+        self.game_over_img = pg.transform.scale(self.game_over_img, (480, 247.2))
         self.go_img_dim = self.game_over_img.get_width(), self.game_over_img.get_height()
 
         self.hd_dim = self.health_duck.get_width(), self.health_duck.get_height()
@@ -114,6 +114,7 @@ class Pillar:
 
             if self.coordinate[0] < -200:
                 self.coordinate = (1300, r.randint(200, 500))
+                self.body.collision.recent_player_collision = None
 
     def speed_increase(self):
             while self.main.running:
@@ -143,12 +144,19 @@ class Player:
         self.rise = False
         self.rot = 0
         self.rot_x = 0
+        self.angle = 0
 
         self.damage_animation = False
         self.show_image = True
         self.da = 0
 
+        # GAME OVER Flags and Variables
         self.go_sec = -200
+        self.velocity = 0
+        self.acceleration = 0.1
+        self.go_down = False
+        self.go_val = 0
+
 
     def draw(self):
         #pg.draw.circle(self.main.window, 'red', self.player_pos, 25)
@@ -190,10 +198,17 @@ class Player:
         if self.health >= 1:
             self.rot = m.sin(self.rot_x) * 14
             self.rot_x += 0.005 * self.main.delta_time
+        else:
+            self.angle += .8 * self.main.delta_time
+            self.rot = self.angle
 
     def check_if_alive(self):
         if self.health <= 0:
             self.alive = False
+            self.game_over()
+        else:
+            self.original_pos = self.player_pos
+
 
     def play_damage_animation(self, x):
         if self.damage_animation:
@@ -208,11 +223,23 @@ class Player:
 
 
     def game_over(self):
-        original_y = self.player_pos[1]
-        y = original_y
-        pg.time.wait(2000)
-        for i in range(0, 1000):
-            self.go_sec += .1 * self.main.delta_time
+        if not self.go_down:
+            self.velocity = -3
+
+            if self.go_val > 15:
+                self.go_down = True
+
+            self.go_val += 1
+        else:
+            self.velocity += 0.1
+
+            if self.velocity > 6:
+                self.velocity = 6
+            
+        speed = self.velocity * .1
+        self.player_pos = self.original_pos[0], self.player_pos[1] + (speed * self.main.delta_time)
+
+            
 
 
 
@@ -234,7 +261,7 @@ class Water:
     def draw_water_rect(self):
         self.sin_wave()
         self.water_rect = pg.Surface((1200, 1000), pg.SRCALPHA)
-        self.water_rect.fill((0, 0, 255, 128))
+        self.water_rect.fill((0, 0, 255, 170))
         self.window.blit(self.water_rect, self.water_pos)
 
 
@@ -242,9 +269,9 @@ class Water:
         if self.player.health >= 1:
             self.y = self.body.player.player_pos[1] + 14
             self.x += .004 * self.main.delta_time
+        if self.y > -100:
             self.y += m.sin(self.x) * 6 #* self.main.delta_time
             self.water_pos = (0, self.y)
-    
 class Collision:
     def __init__(self, body):
         self.body = body

@@ -7,7 +7,7 @@ from library import *
 class Main:
     def __init__(self):
         self.running = True
-        self.window = pg.display.set_mode((WIDTH, HEIGHT), flags=pg.RESIZABLE)
+        self.window = pg.display.set_mode((WIDTH, HEIGHT))
         self.body = Body(self)
         self.clock = pg.time.Clock()
         
