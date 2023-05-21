@@ -2,7 +2,8 @@ import pygame as pg
 import time as t
 import random as r
 import math as m
-import sys
+import json
+import os
 from settings import *
 from threading import Thread
 
@@ -16,13 +17,16 @@ class Body:
         y1 = r.randint(200, 500)
         y2 = r.randint(200, 500)
 
-
         self.obstacle1 = Pillar(self, (1300, y1))
         self.obstacle2 = Pillar(self, (2050, y2))
 
-
         self.ui = UI(self)
         self.collision = Collision(self)
+
+        self.score_data = []
+        self.score_data_dir = 'data/score.json'
+
+        self.score_data = self.load_game_data(self.score_data_dir)
 
     def draw(self):
         self.obstacle1.draw()
@@ -32,9 +36,26 @@ class Body:
         self.ui.update()
         self.collision.update()
 
+    def save_game_data(self, data, filename):
+        self.check_data_exists(filename)
+        with open(filename, "w") as file:
+            json.dump(data, file)
+
+    def load_game_data(self, filename):
+        self.check_data_exists(filename)
+        with open(filename, "r") as file:
+            return json.load(file)
+
+    def check_data_exists(self, filename):
+        if not os.path.exists(filename):
+            with open(filename, "w") as file:
+                json.dump([], file)
+
 
 class UI:
     def __init__(self, body):
+        pg.font.init()
+
         self.body = body
         self.main = body.main
         self.player = body.player
@@ -67,6 +88,10 @@ class UI:
         self.hd_dim = self.health_duck.get_width(), self.health_duck.get_height()
         self.hs_dim = self.health_skull.get_width(), self.health_skull.get_height()
 
+        font = 'fonts/Game-Font.ttf'
+        self.font = pg.font.Font(font, 200)
+        self.font_hs = pg.font.Font(font, 50)
+
         # FLAGS
         self.mouse_in_ta = False
 
@@ -76,6 +101,8 @@ class UI:
         self.health()
         self.check_events()
         self.score_update()
+        self.score()
+        self.highscore()
 
     def draw(self):
         pass
@@ -106,8 +133,6 @@ class UI:
             self.window.blit(self.ta_img_sc, (((WIDTH/2) - self.ta_img_dim[0]/2), self.go_y + 300))
             #pg.draw.rect(self.window, 'white', self.ta_img_rect)
 
-
-
     def health_draw(self, image, x):
         self.window.blit(image, (x, self.health_pos_cons[1]))
 
@@ -118,8 +143,9 @@ class UI:
         for event in self.main.events:
             if event.type == pg.MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    if self.mouse_in_ta:
-                        self.start_again()
+                    if not self.player.alive:
+                        if self.mouse_in_ta:
+                            self.start_again()
 
     def start_again(self):
         self.player.start_again()
@@ -129,6 +155,23 @@ class UI:
 
     def score_update(self):
         self.main.score = self.player.score
+
+    def score(self):
+        if self.player.alive:
+            self.text = self.font.render(str(self.player.score), True, (255, 255, 255))
+            x = WIDTH/2 - (self.text.get_width() / 2)
+            self.window.blit(self.text, (x, 60))
+
+    def highscore(self):
+        text = self.font_hs.render('HIGHSCORES', True, (255, 255, 255))
+        self.window.blit(text, (10, 10))
+        j =40
+        a = 1
+        for i in self.body.score_data:
+            text = self.font_hs.render(f'[{a}] {i}', True, (255, 255, 255))
+            self.window.blit(text, (20, j))
+            j += 25
+            a += 1
 
 class Pillar:
     def __init__(self, body, pos):
@@ -161,7 +204,7 @@ class Pillar:
             if self.coordinate[0] < -200:
                 self.coordinate = (1300, r.randint(200, 520))
                 self.body.collision.recent_player_collision = None
-                self.player.recent_score_collision = None
+                self.body.collision.recent_score_collision = None
 
     def speed_increase(self):
             while self.main.running:
@@ -211,6 +254,7 @@ class Player:
         self.acceleration = 0.1
         self.go_down = False
         self.go_val = 0
+        self.score_updated = False
 
 
     def draw(self):
@@ -269,6 +313,9 @@ class Player:
         if self.health <= 0:
             self.alive = False
             self.game_over()
+
+            if not self.score_updated:
+                self.update_score_data()
         else:
             self.original_pos = self.player_pos
             self.alive = True
@@ -311,8 +358,22 @@ class Player:
         self.go_val = 0
         self.angle = 0
         self.score = 0
+        self.score_updated = False
 
+    def update_score_data(self):
+        score_data = self.body.score_data
 
+        score_data.append(self.score)
+        if len(score_data) > 3:
+            score_data.sort()
+            score_data.reverse()
+            score_data.pop(-1)
+
+        self.score_updated = True
+        score_data.sort()
+        score_data.reverse()
+        self.body.score_data = score_data
+        self.body.save_game_data(self.body.score_data, self.body.score_data_dir)
 
 
 class Water:
