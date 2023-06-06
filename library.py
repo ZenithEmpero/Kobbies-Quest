@@ -8,6 +8,7 @@ from threading import Thread
 
 class Body:
     def __init__(self, main):
+        print('Body Class Init')
         self.window = main.window
         self.main = main
         self.player = Player(self)
@@ -16,7 +17,7 @@ class Body:
         y1 = r.randint(200, 500)
         y2 = r.randint(200, 500)
 
-        self.obstacle1 = Pillar(self, (1300, y1))
+        self.obstacle1 = Pillar(self, (1305, y1))
         self.obstacle2 = Pillar(self, (2050, y2))
 
         self.ui = UI(self)
@@ -28,12 +29,7 @@ class Body:
         self.score_data = self.load_game_data(self.score_data_dir)
 
     def draw(self):
-        self.obstacle1.draw()
-        self.obstacle2.draw()
-        self.player.draw()
-        self.water.draw()
-        self.ui.update()
-        self.collision.update()
+        pass
 
     def save_game_data(self, data, filename):
         self.check_data_exists(filename)
@@ -53,6 +49,7 @@ class Body:
 
 class UI:
     def __init__(self, body):
+        print('UI Class Init')
         pg.font.init()
 
         self.body = body
@@ -93,6 +90,7 @@ class UI:
 
         # FLAGS
         self.mouse_in_ta = False
+
 
     def update(self):
         self.mouse_pos_up()
@@ -144,7 +142,9 @@ class UI:
                 if event.button == 1:
                     if not self.player.alive:
                         if self.mouse_in_ta:
-                            self.start_again()
+                            self.main.menu.running = True
+                            self.main.menu.text_start.clicked = False
+                            self.main.start = False
 
     def start_again(self):
         self.player.start_again()
@@ -157,66 +157,102 @@ class UI:
 
     def score(self):
         if self.player.alive:
-            self.text = self.font.render(str(self.player.score), True, (255, 255, 255))
+            self.text = self.font.render(str(self.player.score), True, 'black')
+            x = WIDTH/2 - (self.text.get_width() / 2)
+            self.window.blit(self.text, (x + 5, 60 + 5))
+            self.text = self.font.render(str(self.player.score), True, 'yellow')
             x = WIDTH/2 - (self.text.get_width() / 2)
             self.window.blit(self.text, (x, 60))
+            
 
     def highscore(self):
-        text = self.font_hs.render('HIGHSCORES', True, (255, 255, 255))
+        text = self.font_hs.render('HIGHSCORES', True, 'black')
+        self.window.blit(text, (10 + 3, 10 + 3))
+        j =40
+        a = 1
+        for i in self.body.score_data:
+            text = self.font_hs.render(f'[{a}] {i}', True, 'black')
+            self.window.blit(text, (20 + 3, j + 3))
+            j += 25
+            a += 1
+
+        text = self.font_hs.render('HIGHSCORES', True, 'yellow')
         self.window.blit(text, (10, 10))
         j =40
         a = 1
         for i in self.body.score_data:
-            text = self.font_hs.render(f'[{a}] {i}', True, (255, 255, 255))
+            text = self.font_hs.render(f'[{a}] {i}', True, 'yellow')
             self.window.blit(text, (20, j))
             j += 25
             a += 1
 
+
 class Pillar:
-    def __init__(self, body, pos):
+    def __init__(self, body, pos) -> None:
+        self.body = body
         self.main = body.main
         self.window = self.main.window
-        self.body = body
         self.player = body.player
         self.coordinate = pos
-        self.gap = 600
+        self.pos = pos
+        self.gap = 670
         self.speed = obstacle_speed
-
         self.pillar_img = pg.image.load('textures/pillar.png')
+        self.pillar_img = pg.transform.scale(self.pillar_img, (189, 483))
         self.pillar_img_dim = self.pillar_img.get_width(), self.pillar_img.get_height()
 
+        self.pillar2_img = pg.image.load('textures/pillar2.png')
+        self.pillar2_img = pg.transform.scale(self.pillar2_img, (189, 483))
+
         self.top_pillar_img = pg.transform.rotate(self.pillar_img, 180)
+        self.top_pillar2_img = pg.transform.rotate(self.pillar2_img, 180)
 
-        Thread(target= self.speed_increase).start()
-       
+        self.pillar_used = self.pillar_img
+        self.top_pillar_used = self.top_pillar_img
 
-    def draw(self):
+        self.start = False
+        #Thread(target= self.speed_increase).start()
+
+    def update(self):
         self.movement()
-        self.window.blit(self.pillar_img, (self.coordinate[0], self.coordinate[1]))
-        self.window.blit(self.top_pillar_img, (self.coordinate[0], self.coordinate[1] - self.gap))
+        self.window.blit(self.pillar_used, (self.coordinate[0], self.coordinate[1]))
+        self.window.blit(self.top_pillar_used, (self.coordinate[0], self.coordinate[1] - self.gap))
 
     def movement(self):
-        if self.player.alive:
-            self.speed = self.speed
-            self.coordinate = (self.coordinate[0] - self.speed * self.main.delta_time, self.coordinate[1])
-
+        if self.player.alive and not self.main.menu.running:
             if self.coordinate[0] < -200:
                 self.coordinate = (1300, r.randint(200, 520))
                 self.body.collision.recent_player_collision = None
                 self.body.collision.recent_score_collision = None
 
+                for i in range(0, 2):
+                    if i == 0:
+                        self.pillar_used = self.pillar_img
+                    elif i == 1:
+                        self.pillar_used = self.pillar2_img
+                for i in range(0, 2):
+                    if i == 0:
+                        self.top_pillar_used = self.top_pillar_img
+                    elif i == 1:
+                        self.top_pillar_used = self.top_pillar2_img
+
+            else:
+                x = self.coordinate[0] - self.speed * self.main.delta_time
+                self.coordinate = x, self.coordinate[1]
+
     def speed_increase(self):
-            while self.main.running:
-                pg.time.wait(1000)
-                self.speed += 0.001
+        while self.main.running and self.player.alive and not self.main.menu.running:
+            pg.time.wait(1000)
+            self.speed += .001
 
     def start_again(self):
-        self.coordinate = self.coordinate[0], self.coordinate[1] + 1800
+        self.coordinate = self.pos
         self.speed = obstacle_speed
 
 
 class Player:
     def __init__(self, body):
+        print('Player Class Init')
         self.player_pos = (200, 100)
         self.body = body
         self.main = body.main
@@ -377,6 +413,7 @@ class Player:
 
 class Water:
     def __init__(self, body):
+        print('Water Class Init')
         self.body = body
         self.main = body.main
         self.window = self.main.window
@@ -398,7 +435,7 @@ class Water:
             self.water_pos = (0, self.player.player_pos[1] + 14)
 
         self.water_rect = pg.Surface((1200, 1000), pg.SRCALPHA)
-        self.water_rect.fill((0, 0, 255, 170))
+        self.water_rect.fill((0, 0, 255, 100))
         self.window.blit(self.water_rect, self.water_pos)
 
 
@@ -412,6 +449,7 @@ class Water:
 
 class Collision:
     def __init__(self, body):
+        print('Collision Class Inir')
         self.body = body
         self.main = body.main
         self.player = body.player
@@ -425,7 +463,7 @@ class Collision:
 
     def update(self):
         self.position_collision_rect()
-        self.draw()
+        #self.draw()
         self.detect_collision()
 
     def draw(self):
@@ -450,14 +488,14 @@ class Collision:
         ob1_pos = self.ob1.coordinate[0], self.ob1.coordinate[1]
         self.ob1_rect = pg.Rect(ob1_pos[0], ob1_pos[1], size[0], size[1])
         self.ob1_rect_top = pg.Rect(ob1_pos[0], ob1_pos[1] - (self.ob1.gap), size[0], size[1])
-        self.ob1_score_rect = pg.Rect(ob1_pos[0] + 100, ob1_pos[1] - 105, 90, 90)
+        self.ob1_score_rect = pg.Rect(ob1_pos[0] + 100, ob1_pos[1] - 170, 90, 150)
 
         # OBSTACLE 2 COLLISION
         size = self.ob2.pillar_img_dim[0], self.ob2.pillar_img_dim[1]
         ob2_pos = self.ob2.coordinate[0], self.ob2.coordinate[1]
         self.ob2_rect = pg.Rect(ob2_pos[0], ob2_pos[1], size[0], size[1])
         self.ob2_rect_top = pg.Rect(ob2_pos[0], ob2_pos[1] - (self.ob2.gap), size[0], size[1])
-        self.ob2_score_rect = pg.Rect(ob2_pos[0] + 100, ob2_pos[1] - 105, 90, 90)
+        self.ob2_score_rect = pg.Rect(ob2_pos[0] + 100, ob2_pos[1] - 170, 90, 150)
 
         self.ob1_rects = [self.ob1_rect, self.ob1_rect_top]
         self.ob2_rects = [self.ob2_rect, self.ob2_rect_top]
@@ -468,6 +506,7 @@ class Collision:
             if self.recent_player_collision != 1:
                 if self.player_rect.colliderect(i):
                     self.player.health -= 1
+                    self.main.forg_audio.play()
                     if self.player.health >= 1:
                         Thread(target= self.reverse_damage_animation).start()
                     self.recent_player_collision = 1
@@ -476,6 +515,7 @@ class Collision:
             if self.recent_player_collision != 2:
                 if self.player_rect.colliderect(i):
                     self.player.health -= 1
+                    self.main.forg_audio.play()
                     if self.player.health >= 1:
                         Thread(target= self.reverse_damage_animation).start()
                     self.recent_player_collision = 2
