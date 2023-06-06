@@ -1,5 +1,4 @@
 import pygame as pg
-import time as t
 import random as r
 import math as m
 import json
@@ -426,7 +425,7 @@ class Collision:
 
     def update(self):
         self.position_collision_rect()
-        #self.draw()
+        self.draw()
         self.detect_collision()
 
     def draw(self):
