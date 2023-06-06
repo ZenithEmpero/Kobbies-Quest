@@ -1,6 +1,6 @@
 # CAPSTONE PROJECT
 
-### Kobbies-Quest
+### Koobie's Quest
 > A blend between flappy bird and zombie tsunami game
 
 #### Members:
