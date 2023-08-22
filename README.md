@@ -1,7 +1,7 @@
 # CAPSTONE PROJECT
 
 ### Koobie's Quest
-> A blend between flappy bird and zombie tsunami game
+> Capstone Project
 
 #### Members:
 + Bianca
